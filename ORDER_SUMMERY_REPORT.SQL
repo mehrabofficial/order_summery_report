@@ -14,7 +14,6 @@ SELECT
      
     ('$' || (SUM(wpbd.PO_QUANTITY) * wpbd.UNIT_PRICE)) AS FOB_VALUE,
     
-<<<<<<< HEAD
 -- Conditional SMV calculation for COMPANY_ID = 5
 CASE 
     WHEN lc.ID = 5 THEN 
@@ -25,16 +24,6 @@ CASE
         SUM(CASE WHEN lb.ID = 21 THEN wpcsb.ORDER_QUANTITY ELSE wpbd.PO_QUANTITY END)
     ELSE 0
 END AS TOTAL_SMV,  
-=======
-    -- Conditional SMV calculation for COMPANY_ID = 5
-    CASE 
-        WHEN lc.ID = 5 THEN 
-            (wpmds.SMV_PCS + wpmds.CUTSMV_PCS + wpmds.FINSMV_PCS) * SUM(wpbd.PO_QUANTITY)
-        WHEN wpdm.TOTAL_SET_QNTY != 0 THEN
-            wpdm.SET_SMV / wpdm.TOTAL_SET_QNTY
-        ELSE 0
-    END AS SMV,  
->>>>>>> 985e55271191d31d7c0889793be6c64db6bacd98
 
 -- CM VALUE calculation (CONTRIBUTION_MARGIN * ORDER_QTY)
 ('$' || (pc.CONTRIBUTION_MARGIN * 
