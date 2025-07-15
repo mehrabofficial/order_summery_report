@@ -74,9 +74,56 @@ SELECT
             CASE WHEN lb.ID = 21 THEN wpcsb.ORDER_QUANTITY ELSE wpbd.PO_QUANTITY END)) 
             OVER (PARTITION BY lc.COMPANY_SHORT_NAME, lb.SHORT_NAME, bb.BRAND_NAME), 0) * 100
         ELSE 0
-    END AS TOTAL_SMV_PERCENT
-    
+    END AS TOTAL_SMV_PERCENT,
 
+    --  AVG. FOB/PC = FOB_VALUE / ORDER_QTY
+    CASE 
+        WHEN SUM(CASE WHEN lb.ID = 21 THEN wpcsb.ORDER_QUANTITY ELSE wpbd.PO_QUANTITY END) != 0 THEN
+            (SUM(wpbd.PO_QUANTITY) * wpbd.UNIT_PRICE) / 
+            SUM(CASE WHEN lb.ID = 21 THEN wpcsb.ORDER_QUANTITY ELSE wpbd.PO_QUANTITY END)
+        ELSE 0
+    END AS AVG_FOB_PER_PC,
+
+    --  AVG. CM/PCS = Cm_VALUE / ORDER_QTY
+    CASE 
+        WHEN SUM(CASE WHEN lb.ID = 21 THEN wpcsb.ORDER_QUANTITY ELSE wpbd.PO_QUANTITY END) != 0 THEN
+            (pc.CONTRIBUTION_MARGIN * 
+            SUM(CASE WHEN lb.ID = 21 THEN wpcsb.ORDER_QUANTITY ELSE wpbd.PO_QUANTITY END)) / 
+            SUM(CASE WHEN lb.ID = 21 THEN wpcsb.ORDER_QUANTITY ELSE wpbd.PO_QUANTITY END)
+        ELSE 0
+    END AS AVG_CM_PER_PC,
+
+    --  AVG. SMV/PCS = TOTAL_SMV / ORDER_QTY
+    CASE 
+        WHEN SUM(CASE WHEN lb.ID = 21 THEN wpcsb.ORDER_QUANTITY ELSE wpbd.PO_QUANTITY END) != 0 THEN
+            CASE 
+                WHEN lc.ID = 5 THEN 
+                    (wpmds.SMV_PCS + wpmds.CUTSMV_PCS + wpmds.FINSMV_PCS) / 
+                    SUM(CASE WHEN lb.ID = 21 THEN wpcsb.ORDER_QUANTITY ELSE wpbd.PO_QUANTITY END)
+                WHEN wpdm.TOTAL_SET_QNTY != 0 THEN
+                    (wpdm.SET_SMV / wpdm.TOTAL_SET_QNTY) / 
+                    SUM(CASE WHEN lb.ID = 21 THEN wpcsb.ORDER_QUANTITY ELSE wpbd.PO_QUANTITY END)
+                ELSE 0
+            END
+        ELSE 0
+    END AS AVG_SMV_PER_PC,
+
+    -- EPM = AVG. CM/PCS / AVG. SMV/PCS
+    CASE 
+        WHEN SUM(CASE WHEN lb.ID = 21 THEN wpcsb.ORDER_QUANTITY ELSE wpbd.PO_QUANTITY END) != 0 THEN
+            CASE 
+                WHEN lc.ID = 5 THEN 
+                    (pc.CONTRIBUTION_MARGIN * 
+                    SUM(CASE WHEN lb.ID = 21 THEN wpcsb.ORDER_QUANTITY ELSE wpbd.PO_QUANTITY END)) / 
+                    (wpmds.SMV_PCS + wpmds.CUTSMV_PCS + wpmds.FINSMV_PCS)
+                WHEN wpdm.TOTAL_SET_QNTY != 0 THEN
+                    (pc.CONTRIBUTION_MARGIN * 
+                    SUM(CASE WHEN lb.ID = 21 THEN wpcsb.ORDER_QUANTITY ELSE wpbd.PO_QUANTITY END)) / 
+                    (wpdm.SET_SMV / wpdm.TOTAL_SET_QNTY)
+                ELSE 0
+            END
+        ELSE 0
+    END AS EPM
 
 FROM 
     WO_PO_DETAILS_MASTER wpdm
