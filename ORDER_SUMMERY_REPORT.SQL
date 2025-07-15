@@ -11,14 +11,34 @@ SELECT
 
     SUM(CASE WHEN lb.ID = 21 THEN wpcsb.ORDER_QUANTITY ELSE wpbd.PO_QUANTITY END) AS ORDER_QTY,   
     
-        -- ORDER_QTY_PERCENT calculation with NULLIF to prevent division by zero
+    -- ORDER_QTY_PERCENT calculation with NULLIF to prevent division by zero
     (SUM(CASE WHEN lb.ID = 21 THEN wpcsb.ORDER_QUANTITY ELSE wpbd.PO_QUANTITY END) / 
         NULLIF(SUM(SUM(CASE WHEN lb.ID = 21 THEN wpcsb.ORDER_QUANTITY ELSE wpbd.PO_QUANTITY END)) 
         OVER (PARTITION BY lc.COMPANY_SHORT_NAME, lb.SHORT_NAME, bb.BRAND_NAME), 0)) * 100 AS ORDER_QTY_PERCENT,
 
-    ('$' || (SUM(wpbd.PO_QUANTITY) * wpbd.UNIT_PRICE)) AS FOB_VALUE,
+    -- Calculating FOB_VALUE without concatenation
+    (SUM(wpbd.PO_QUANTITY) * wpbd.UNIT_PRICE) AS FOB_VALUE,
     
-    -- Conditional SMV calculation for COMPANY_ID = 5
+    
+    -- FOB_PERCENT calculation without concatenation
+    (SUM(wpbd.PO_QUANTITY) * wpbd.UNIT_PRICE) / 
+        NULLIF(SUM(SUM(wpbd.PO_QUANTITY * wpbd.UNIT_PRICE)) 
+        OVER (PARTITION BY lc.COMPANY_SHORT_NAME, lb.SHORT_NAME, bb.BRAND_NAME), 0) * 100 AS FOB_PERCENT,  
+
+    -- CM VALUE calculation (CONTRIBUTION_MARGIN * ORDER_QTY)
+    (pc.CONTRIBUTION_MARGIN * 
+        SUM(CASE WHEN lb.ID = 21 THEN wpcsb.ORDER_QUANTITY ELSE wpbd.PO_QUANTITY END)
+    ) AS CM_VALUE,
+
+
+    -- CM_VALUE_PERCENT calculation
+    (pc.CONTRIBUTION_MARGIN * 
+        SUM(CASE WHEN lb.ID = 21 THEN wpcsb.ORDER_QUANTITY ELSE wpbd.PO_QUANTITY END)) / 
+        NULLIF(SUM(SUM(pc.CONTRIBUTION_MARGIN * 
+            CASE WHEN lb.ID = 21 THEN wpcsb.ORDER_QUANTITY ELSE wpbd.PO_QUANTITY END)) 
+        OVER (PARTITION BY lc.COMPANY_SHORT_NAME, lb.SHORT_NAME, bb.BRAND_NAME), 0) * 100 AS CM_VALUE_PERCENT,
+        
+            -- Conditional SMV calculation for COMPANY_ID = 5
     CASE 
         WHEN lc.ID = 5 THEN 
             (wpmds.SMV_PCS + wpmds.CUTSMV_PCS + wpmds.FINSMV_PCS) * 
@@ -27,12 +47,7 @@ SELECT
             (wpdm.SET_SMV / wpdm.TOTAL_SET_QNTY) * 
             SUM(CASE WHEN lb.ID = 21 THEN wpcsb.ORDER_QUANTITY ELSE wpbd.PO_QUANTITY END)
         ELSE 0
-    END AS TOTAL_SMV,  
-
-    -- CM VALUE calculation (CONTRIBUTION_MARGIN * ORDER_QTY)
-    ('$' || (pc.CONTRIBUTION_MARGIN * 
-        SUM(CASE WHEN lb.ID = 21 THEN wpcsb.ORDER_QUANTITY ELSE wpbd.PO_QUANTITY END)
-    )) AS CM_VALUE
+    END AS TOTAL_SMV
 
 FROM 
     WO_PO_DETAILS_MASTER wpdm
@@ -79,3 +94,4 @@ GROUP BY
 
 ORDER BY 
     wpdm.JOB_NO;
+    
