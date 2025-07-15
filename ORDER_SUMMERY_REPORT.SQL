@@ -38,7 +38,7 @@ SELECT
             CASE WHEN lb.ID = 21 THEN wpcsb.ORDER_QUANTITY ELSE wpbd.PO_QUANTITY END)) 
         OVER (PARTITION BY lc.COMPANY_SHORT_NAME, lb.SHORT_NAME, bb.BRAND_NAME), 0) * 100 AS CM_VALUE_PERCENT,
         
-            -- Conditional SMV calculation for COMPANY_ID = 5
+    -- Conditional SMV calculation for COMPANY_ID = 5
     CASE 
         WHEN lc.ID = 5 THEN 
             (wpmds.SMV_PCS + wpmds.CUTSMV_PCS + wpmds.FINSMV_PCS) * 
@@ -48,6 +48,23 @@ SELECT
             SUM(CASE WHEN lb.ID = 21 THEN wpcsb.ORDER_QUANTITY ELSE wpbd.PO_QUANTITY END)
         ELSE 0
     END AS TOTAL_SMV
+
+    -- Total SMV percentage calculation
+    , CASE 
+        WHEN lc.ID = 5 THEN 
+            ((wpmds.SMV_PCS + wpmds.CUTSMV_PCS + wpmds.FINSMV_PCS) * 
+            SUM(CASE WHEN lb.ID = 21 THEN wpcsb.ORDER_QUANTITY ELSE wpbd.PO_QUANTITY END)) / 
+            NULLIF(SUM(SUM((wpmds.SMV_PCS + wpmds.CUTSMV_PCS + wpmds.FINSMV_PCS) * 
+            CASE WHEN lb.ID = 21 THEN wpcsb.ORDER_QUANTITY ELSE wpbd.PO_QUANTITY END)) 
+            OVER (PARTITION BY lc.COMPANY_SHORT_NAME, lb.SHORT_NAME, bb.BRAND_NAME), 0) * 100
+        WHEN wpdm.TOTAL_SET_QNTY != 0 THEN
+            ((wpdm.SET_SMV / wpdm.TOTAL_SET_QNTY) * 
+            SUM(CASE WHEN lb.ID = 21 THEN wpcsb.ORDER_QUANTITY ELSE wpbd.PO_QUANTITY END)) / 
+            NULLIF(SUM(SUM((wpdm.SET_SMV / wpdm.TOTAL_SET_QNTY) * 
+            CASE WHEN lb.ID = 21 THEN wpcsb.ORDER_QUANTITY ELSE wpbd.PO_QUANTITY END)) 
+            OVER (PARTITION BY lc.COMPANY_SHORT_NAME, lb.SHORT_NAME, bb.BRAND_NAME), 0) * 100
+        ELSE 0
+    END AS TOTAL_SMV_PERCENT
 
 FROM 
     WO_PO_DETAILS_MASTER wpdm
