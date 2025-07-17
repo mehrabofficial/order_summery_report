@@ -184,8 +184,7 @@ WHERE
     AND wpdm.status_active = 1
     AND wpbd.Is_deleted = 0
     AND wpbd.status_active = 1
-     AND wpdm.JOB_No = 'MTSL-23-00002'
-
+    --  AND wpdm.JOB_No = 'MTSL-23-00002'
 
 GROUP BY 
     lc.COMPANY_SHORT_NAME, 
